@@ -1,507 +1,218 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>🎈 Пальчикова лічба до 5</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: linear-gradient(135deg, #ffd6e0, #c7f9ff, #fff5ba);
-      font-family: 'Comic Sans MS', 'Chalkboard SE', cursive, sans-serif;
-      overflow: hidden;
-      height: 100vh;
-      user-select: none;
-      touch-action: manipulation;
-    }
-    #container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      padding: 10px;
-    }
-    #video-wrapper {
-      position: relative;
-      width: 90vw;
-      max-width: 500px;
-      aspect-ratio: 4/3;
-      border-radius: 30px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-      background: #000;
-      margin: 10px 0;
-    }
-    #video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transform: scaleX(-1);
-    }
-    #overlay {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-    }
-    .target-number {
-      font-size: 8rem;
-      font-weight: bold;
-      color: white;
-      text-shadow: 0 0 20px #ff6b6b, 0 0 40px #feca57;
-      background: rgba(0,0,0,0.4);
-      border-radius: 50%;
-      width: 120px;
-      height: 120px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 10px;
-    }
-    .detected-count {
-      font-size: 3rem;
-      color: #ffeaa7;
-      text-shadow: 2px 2px 0 #d63031;
-      background: rgba(0,0,0,0.5);
-      padding: 5px 20px;
-      border-radius: 30px;
-    }
-    #ui {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 15px;
-      width: 100%;
-    }
-    .progress-area {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 1.8rem;
-      background: rgba(255,255,255,0.8);
-      padding: 10px 20px;
-      border-radius: 40px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-    .attempts-left {
-      font-weight: bold;
-      color: #e17055;
-    }
-    .score-display {
-      font-size: 2rem;
-      background: #fff;
-      border-radius: 20px;
-      padding: 5px 15px;
-      box-shadow: 0 5px 10px rgba(0,0,0,0.1);
-    }
-    .message {
-      font-size: 2rem;
-      text-align: center;
-      background: rgba(255,255,255,0.85);
-      padding: 10px 25px;
-      border-radius: 20px;
-      margin-top: 10px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-      color: #2d3436;
-    }
-    #fireworks-canvas {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      pointer-events: none;
-      z-index: 1000;
-    }
-    button {
-      font-size: 2rem;
-      padding: 15px 30px;
-      background: #fd79a8;
-      color: white;
-      border: none;
-      border-radius: 40px;
-      cursor: pointer;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-      transition: transform 0.2s;
-    }
-    button:active { transform: scale(0.95); }
-    @media (max-width: 500px) {
-      .target-number { font-size: 5rem; width: 90px; height: 90px; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>GEO MATH AR | 2026</title>
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body { overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, sans-serif; }
+        
+        #video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transform: scaleX(-1); }
+        #canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        
+        /* Прогрес-бар */
+        #progress-container { position: absolute; top: 0; left: 0; width: 100%; height: 10px; background: rgba(0,255,255,0.1); z-index: 150; }
+        #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #00f2ff, #00ff88); box-shadow: 0 0 20px #00f2ff; transition: width 0.4s; }
+
+        #ui { position: absolute; bottom: 40px; left: 0; right: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; }
+        #status {
+            background: rgba(0, 20, 20, 0.8); padding: 25px; border-radius: 30px;
+            color: #00ffff; font-weight: 800; border: 2px solid #00ffff;
+            text-align: center; width: 85%; max-width: 500px;
+            font-size: 1.5rem; backdrop-filter: blur(20px);
+            box-shadow: 0 0 30px rgba(0,255,255,0.3);
+        }
+
+        #start-screen { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #btn-start { background: #00ffff; color: #000; padding: 25px 50px; border-radius: 20px; font-weight: 900; border: none; cursor: pointer; font-size: 1.8rem; text-transform: uppercase; }
+        
+        /* Мітка розпізнаного числа над рукою */
+        #hand-value {
+            position: absolute; color: #fff; background: #ff0055; 
+            padding: 10px 20px; border-radius: 15px; font-size: 2rem; 
+            font-weight: 900; display: none; z-index: 1000;
+        }
+    </style>
 </head>
 <body>
-  <div id="container">
-    <div id="video-wrapper">
-      <video id="video" autoplay playsinline></video>
-      <div id="overlay">
-        <div class="target-number" id="targetDisplay">?</div>
-        <div class="detected-count" id="detectedDisplay">🙌 0</div>
-      </div>
+
+    <div id="progress-container"><div id="progress-bar"></div></div>
+    <div id="hand-value">0</div>
+
+    <div id="start-screen">
+        <h1 style="color:#00ffff; margin-bottom:20px;">GEO MATH AR</h1>
+        <button id="btn-start">ПОЧАТИ КВЕСТ</button>
     </div>
+
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    
     <div id="ui">
-      <div class="progress-area">
-        <span>⭐ <span id="scoreSpan">0</span> / 10</span>
-        <span> | </span>
-        <span>🎯 Залишилось: <span class="attempts-left" id="attemptsLeft">10</span></span>
-      </div>
-      <div class="message" id="messageBox">👋 Помахай ручкою!</div>
+        <div id="status">Завантаження квантового модуля...</div>
     </div>
-  </div>
-  <canvas id="fireworks-canvas"></canvas>
 
-  <!-- MediaPipe Hand Landmarker -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/hand_landmarker/hand_landmarker.js"
-          crossorigin="anonymous"></script>
+    <script type="module">
+        import { HandLandmarker, FilesetResolver } from "https://cdn.skypack.dev/@mediapipe/tasks-vision@0.10.3";
 
-  <script>
-    (function() {
-      // ----- DOM elements -----
-      const video = document.getElementById('video');
-      const targetDisplay = document.getElementById('targetDisplay');
-      const detectedDisplay = document.getElementById('detectedDisplay');
-      const scoreSpan = document.getElementById('scoreSpan');
-      const attemptsLeftSpan = document.getElementById('attemptsLeft');
-      const messageBox = document.getElementById('messageBox');
-      const fireworksCanvas = document.getElementById('fireworks-canvas');
-      const ctxFW = fireworksCanvas.getContext('2d');
+        const video = document.getElementById('video');
+        const statusDiv = document.getElementById('status');
+        const progressBar = document.getElementById('progress-bar');
+        const handValDiv = document.getElementById('hand-value');
 
-      // ----- Game state -----
-      const MAX_ATTEMPTS = 10;
-      let attempts = 0;
-      let score = 0;
-      let targetNumber = 0;
-      let gameActive = false;
-      let roundInProgress = false;
-      let evaluationTimer = null;
-      let handLandmarker = null;
-      let lastDetectedCount = 0;
-      let smoothedCount = 0;
-      let countBuffer = [];
-      const BUFFER_SIZE = 5;
+        let handLandmarker, scene, camera, renderer, masterGroup, ring;
+        let currentTarget = 1;
+        let score = 0;
+        let isProcessing = false;
+        let lastSmoothCount = 0;
+        let countBuffer = [];
 
-      // ----- Audio context for sounds -----
-      let audioCtx = null;
-      function getAudioContext() {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        return audioCtx;
-      }
-
-      function playTone(freq, duration, type = 'sine', gain = 0.3) {
-        const ctx = getAudioContext();
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = type;
-        osc.frequency.value = freq;
-        g.gain.setValueAtTime(gain, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc.connect(g);
-        g.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + duration);
-      }
-
-      function playSuccessSound() {
-        playTone(523, 0.15, 'sine', 0.3);
-        setTimeout(() => playTone(659, 0.15, 'sine', 0.3), 150);
-        setTimeout(() => playTone(784, 0.25, 'sine', 0.4), 300);
-      }
-
-      function playErrorSound() {
-        playTone(200, 0.2, 'triangle', 0.3);
-        setTimeout(() => playTone(180, 0.25, 'triangle', 0.2), 200);
-      }
-
-      function playStartSound() {
-        playTone(400, 0.1, 'sine', 0.2);
-        setTimeout(() => playTone(500, 0.15, 'sine', 0.25), 100);
-      }
-
-      // ----- Fireworks animation -----
-      let fireworksActive = false;
-      let particles = [];
-      let fireworksRAF = null;
-
-      function createFireworks() {
-        fireworksActive = true;
-        const centerX = fireworksCanvas.width / 2;
-        const centerY = fireworksCanvas.height / 2;
-        for (let i = 0; i < 30; i++) {
-          particles.push({
-            x: centerX,
-            y: centerY,
-            vx: (Math.random() - 0.5) * 8,
-            vy: (Math.random() - 0.5) * 8 - 2,
-            life: 1,
-            color: `hsl(${Math.random() * 360}, 100%, 70%)`,
-            size: Math.random() * 6 + 2
-          });
-        }
-        if (!fireworksRAF) animateFireworks();
-      }
-
-      function animateFireworks() {
-        if (!fireworksActive && particles.length === 0) {
-          fireworksRAF = null;
-          return;
-        }
-        ctxFW.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
-        particles = particles.filter(p => p.life > 0);
-        particles.forEach(p => {
-          p.x += p.vx;
-          p.y += p.vy;
-          p.vy += 0.1; // gravity
-          p.life -= 0.02;
-          ctxFW.globalAlpha = p.life;
-          ctxFW.fillStyle = p.color;
-          ctxFW.beginPath();
-          ctxFW.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctxFW.fill();
-        });
-        ctxFW.globalAlpha = 1;
-        if (particles.length > 0 || fireworksActive) {
-          fireworksRAF = requestAnimationFrame(animateFireworks);
-        } else {
-          fireworksRAF = null;
-          fireworksActive = false;
-        }
-      }
-
-      function stopFireworks() {
-        fireworksActive = false;
-        // particles will fade out via existing animation
-      }
-
-      function resizeFireworksCanvas() {
-        fireworksCanvas.width = window.innerWidth;
-        fireworksCanvas.height = window.innerHeight;
-      }
-      window.addEventListener('resize', resizeFireworksCanvas);
-      resizeFireworksCanvas();
-
-      // ----- Speech synthesis (Ukrainian) -----
-      function speak(text) {
-        return new Promise((resolve) => {
-          if (!window.speechSynthesis) {
-            console.warn('Speech synthesis not supported');
-            resolve();
-            return;
-          }
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = 'uk-UA';
-          utterance.rate = 0.9;
-          utterance.pitch = 1.1;
-          // Try to pick a Ukrainian voice
-          const voices = speechSynthesis.getVoices();
-          const ukVoice = voices.find(v => v.lang.startsWith('uk'));
-          if (ukVoice) utterance.voice = ukVoice;
-          utterance.onend = resolve;
-          utterance.onerror = resolve;
-          speechSynthesis.speak(utterance);
-        });
-      }
-
-      // Preload voices
-      if (window.speechSynthesis) {
-        speechSynthesis.onvoiceschanged = () => {};
-      }
-
-      // ----- Finger counting from landmarks -----
-      function countFingers(landmarks) {
-        // Indices: tip, pip (or ip for thumb)
-        const fingers = [
-          { tip: 4, pip: 3 },  // thumb
-          { tip: 8, pip: 6 },  // index
-          { tip: 12, pip: 10 }, // middle
-          { tip: 16, pip: 14 }, // ring
-          { tip: 20, pip: 18 }  // pinky
+        // --- Логіка навчання ---
+        const lessons = [
+            { num: 1, word: "Один", msg: "Покажи один пальчик. Це як висока вежа!" },
+            { num: 2, word: "Два", msg: "Тепер покажи два. Як вушка у зайчика! 🐰" },
+            { num: 3, word: "Три", msg: "Чудово! А зможеш показати три?" },
+            { num: 4, word: "Чотири", msg: "Ого! Чотири пальчики - це вже ціла команда." },
+            { num: 5, word: "П'ять", msg: "Дай мені п'ять! Покажи всю долоньку! ✋" }
         ];
-        let count = 0;
-        for (const f of fingers) {
-          // finger is extended if tip is above pip (y coordinate smaller)
-          if (landmarks[f.tip].y < landmarks[f.pip].y) {
-            count++;
-          }
-        }
-        return count;
-      }
 
-      // ----- Hand detection loop -----
-      function updateDetectedCount(rawCount) {
-        // Smooth: add to buffer, get mode
-        countBuffer.push(rawCount);
-        if (countBuffer.length > BUFFER_SIZE) countBuffer.shift();
-        // Mode calculation
-        const freq = {};
-        let maxFreq = 0, mode = rawCount;
-        countBuffer.forEach(c => {
-          freq[c] = (freq[c] || 0) + 1;
-          if (freq[c] > maxFreq) {
-            maxFreq = freq[c];
-            mode = c;
-          }
-        });
-        smoothedCount = mode;
-        lastDetectedCount = rawCount;
-        // Update UI
-        const handEmojis = ['✊','☝️','✌️','🤟','🖖','🖐️'];
-        detectedDisplay.textContent = `${handEmojis[smoothedCount] || '🙌'} ${smoothedCount}`;
-      }
-
-      function onFrame() {
-        if (!handLandmarker || !video.readyState || video.readyState < 2) {
-          requestAnimationFrame(onFrame);
-          return;
-        }
-        const startTimeMs = performance.now();
-        const results = handLandmarker.detectForVideo(video, startTimeMs);
-        if (results.landmarks && results.landmarks.length > 0) {
-          // Use first hand only
-          const landmarks = results.landmarks[0];
-          const count = countFingers(landmarks);
-          updateDetectedCount(count);
-        } else {
-          updateDetectedCount(0);
-        }
-        requestAnimationFrame(onFrame);
-      }
-
-      // ----- Game logic -----
-      async function startNewRound() {
-        if (attempts >= MAX_ATTEMPTS || !gameActive) return;
-        roundInProgress = true;
-        // Generate random target 1-5, but ensure it's different from previous? No, random
-        targetNumber = Math.floor(Math.random() * 5) + 1;
-        targetDisplay.textContent = targetNumber;
-
-        // Speak target
-        messageBox.textContent = `🎤 Слухай уважно...`;
-        playStartSound();
-        const numberWords = ['нуль','один','два','три','чотири','п’ять'];
-        await speak(`Покажи ${numberWords[targetNumber]} пальчики!`);
-
-        // Wait a moment then start detection period
-        messageBox.textContent = `🤔 Покажи ${targetNumber} пальчики!`;
-        // Clear buffer
-        countBuffer = [];
-        smoothedCount = 0;
-
-        // Set a 3-second timer to evaluate
-        if (evaluationTimer) clearTimeout(evaluationTimer);
-        evaluationTimer = setTimeout(evaluateAnswer, 3500);
-      }
-
-      function evaluateAnswer() {
-        if (!roundInProgress) return;
-        roundInProgress = false;
-        const correct = (smoothedCount === targetNumber);
-        attempts++;
-        attemptsLeftSpan.textContent = MAX_ATTEMPTS - attempts;
-
-        if (correct) {
-          score++;
-          scoreSpan.textContent = score;
-          messageBox.textContent = `✅ Правильно! ${targetNumber} пальчики! 🎉`;
-          playSuccessSound();
-          createFireworks();
-          // stop fireworks after 2 sec
-          setTimeout(stopFireworks, 2000);
-        } else {
-          messageBox.textContent = `😊 Ой, це ${smoothedCount}, а треба ${targetNumber}. Нічого!`;
-          playErrorSound();
+        function speak(text, callback) {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'uk-UA';
+            u.rate = 1.0;
+            u.onend = callback;
+            window.speechSynthesis.speak(u);
         }
 
-        // Wait a bit then next round or end
-        setTimeout(() => {
-          if (attempts >= MAX_ATTEMPTS) {
-            endGame();
-          } else {
-            startNewRound();
-          }
-        }, 2500);
-      }
-
-      function endGame() {
-        gameActive = false;
-        roundInProgress = false;
-        if (evaluationTimer) clearTimeout(evaluationTimer);
-        targetDisplay.textContent = '🏆';
-        messageBox.innerHTML = `🎯 Гра закінчена!<br>Ти показав правильно <b>${score}</b> з ${MAX_ATTEMPTS}!<br>${score >= 8 ? '🌟 Супер! Ти молодець!' : score >= 5 ? '👍 Гарна спроба!' : '💪 Спробуй ще раз!'}`;
-        scoreSpan.textContent = score;
-        attemptsLeftSpan.textContent = '0';
-        // Big celebration if high score
-        if (score >= 7) {
-          createFireworks();
-          setTimeout(stopFireworks, 4000);
-          playSuccessSound();
-          setTimeout(playSuccessSound, 300);
-        }
-        // Show restart button indirectly via a message, but we can just restart automatically after a delay or add a button
-        setTimeout(() => {
-          messageBox.innerHTML += '<br><button onclick="location.reload()">🔄 Грати знову</button>';
-        }, 3000);
-      }
-
-      async function initGame() {
-        // Initialize camera
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } });
-          video.srcObject = stream;
-          await video.play();
-        } catch (err) {
-          messageBox.textContent = '❌ Потрібен доступ до камери!';
-          console.error(err);
-          return;
+        async function initAI() {
+            const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
+            handLandmarker = await HandLandmarker.createFromOptions(vision, {
+                baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task", delegate: "GPU" },
+                runningMode: "VIDEO", numHands: 1
+            });
+            startLesson();
         }
 
-        // Initialize MediaPipe HandLandmarker
-        try {
-          const { HandLandmarker, FilesetResolver } = window;
-          const vision = await FilesetResolver.forVisionTasks(
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
-          );
-          handLandmarker = await HandLandmarker.createFromOptions(vision, {
-            baseOptions: {
-              modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
-              delegate: "GPU"
-            },
-            runningMode: "VIDEO",
-            numHands: 1
-          });
-          console.log('HandLandmarker loaded');
-        } catch (err) {
-          messageBox.textContent = '❌ Помилка завантаження моделі!';
-          console.error(err);
-          return;
+        function startLesson() {
+            if (score >= lessons.length) {
+                statusDiv.innerText = "МІСІЯ ВИКОНАНА! ТИ МАЙСТЕР ЛІЧБИ! 🏆";
+                speak("Вітаю! Ти вивчив усі числа. Ти справжній математичний геній!");
+                return;
+            }
+
+            const lesson = lessons[score];
+            currentTarget = lesson.num;
+            statusDiv.innerText = `ПОКАЖИ: ${lesson.num}`;
+            speak(lesson.msg);
+            isProcessing = false;
         }
 
-        // Start detection loop
-        requestAnimationFrame(onFrame);
+        // --- Three.js AR елементи ---
+        function setupScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
 
-        // Start game
-        gameActive = true;
-        attempts = 0;
-        score = 0;
-        scoreSpan.textContent = '0';
-        attemptsLeftSpan.textContent = MAX_ATTEMPTS;
-        messageBox.textContent = '👋 Давай порахуємо пальчики!';
-        targetDisplay.textContent = '?';
-        await speak('Привіт! Будемо вчитися рахувати до п’яти. Показуй пальчики!');
-        startNewRound();
-      }
+            masterGroup = new THREE.Group();
+            
+            // Неонове кільце
+            ring = new THREE.Mesh(
+                new THREE.TorusGeometry(0.4, 0.02, 16, 100),
+                new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 2 })
+            );
+            masterGroup.add(ring);
+            
+            scene.add(masterGroup);
+            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+            camera.position.z = 3;
+            animate();
+        }
 
-      // Start everything when page loads
-      window.addEventListener('load', () => {
-        // Small delay to let DOM settle
-        setTimeout(initGame, 500);
-      });
+        function countFingers(landmarks) {
+            const tips = [8, 12, 16, 20];
+            const pips = [6, 10, 14, 18];
+            let count = 0;
+            
+            // Чотири пальці
+            tips.forEach((tip, i) => {
+                if (landmarks[tip].y < landmarks[pips[i]].y) count++;
+            });
+            
+            // Великий палець (спрощена логіка по горизонталі)
+            const thumbTip = landmarks[4];
+            const thumbBase = landmarks[17];
+            if (Math.abs(thumbTip.x - thumbBase.x) > 0.15) count++;
+            
+            return count;
+        }
 
-    })();
-  </script>
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (handLandmarker && video.readyState >= 2) {
+                const res = handLandmarker.detectForVideo(video, performance.now());
+                
+                if (res.landmarks?.[0]) {
+                    const hand = res.landmarks[0];
+                    const currentCount = countFingers(hand);
+                    
+                    // Стабілізація розпізнавання (буфер)
+                    countBuffer.push(currentCount);
+                    if (countBuffer.length > 10) countBuffer.shift();
+                    const smoothCount = Math.round(countBuffer.reduce((a, b) => a + b) / countBuffer.length);
+
+                    // Візуалізація AR-кільця за рукою
+                    const wrist = hand[0];
+                    masterGroup.position.x = (0.5 - wrist.x) * 4;
+                    masterGroup.position.y = (0.5 - wrist.y) * 3;
+                    masterGroup.visible = true;
+                    ring.rotation.y += 0.05;
+
+                    // Мітка з цифрою
+                    handValDiv.style.display = 'block';
+                    handValDiv.style.left = `${(1 - wrist.x) * 100}%`;
+                    handValDiv.style.top = `${wrist.y * 100}%`;
+                    handValDiv.innerText = smoothCount;
+
+                    // Перевірка відповіді
+                    if (!isProcessing && smoothCount === currentTarget) {
+                        isProcessing = true;
+                        handleSuccess();
+                    }
+                } else {
+                    masterGroup.visible = false;
+                    handValDiv.style.display = 'none';
+                }
+            }
+            renderer.render(scene, camera);
+        }
+
+        function handleSuccess() {
+            ring.material.color.setHex(0x00ff88);
+            ring.material.emissive.setHex(0x00ff88);
+            
+            speak(`Правильно! Це число ${lessons[score].word}. Ти молодець!`, () => {
+                score++;
+                progressBar.style.width = `${(score / lessons.length) * 100}%`;
+                
+                setTimeout(() => {
+                    ring.material.color.setHex(0x00ffff);
+                    ring.material.emissive.setHex(0x00ffff);
+                    startLesson();
+                }, 1000);
+            });
+        }
+
+        document.getElementById('btn-start').onclick = async () => {
+            document.getElementById('start-screen').style.display = 'none';
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            video.srcObject = stream;
+            setupScene();
+            await initAI();
+        };
+    </script>
 </body>
 </html>
