@@ -20,7 +20,6 @@
             z-index: 1; pointer-events: none;
         }
 
-        /* === Зірочки прогресу === */
         #stars-bar {
             position: absolute; top: 16px; right: 16px;
             z-index: 150; display: flex; gap: 8px;
@@ -31,21 +30,21 @@
         }
         .star-icon.earned { opacity: 1; filter: drop-shadow(0 0 12px #FFD700); transform: scale(1.2); }
 
-        /* === Дорожній знак (спливаюче вікно) === */
         #sign-container {
             position: fixed; inset: 0; z-index: 2000;
             display: none; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.8);
             pointer-events: none;
         }
         .sign-card {
-            background: white; padding: 20px; border-radius: 40px;
+            background: white; padding: 30px; border-radius: 40px;
             display: flex; flex-direction: column; align-items: center;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            max-width: 90%;
             animation: sign-zoom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .sign-image {
-            width: 280px; height: 280px;
+            width: 250px; height: 250px;
             object-fit: contain; border-radius: 15px;
         }
         @keyframes sign-zoom {
@@ -53,7 +52,6 @@
             to { transform: scale(1); opacity: 1; }
         }
 
-        /* === Статус внизу === */
         #status-box {
             position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%);
             z-index: 100; width: 88%; max-width: 480px;
@@ -64,31 +62,31 @@
         }
         #status-text { font-size: 1.5rem; font-weight: 900; color: #1a0033; }
 
-        /* === Бульбашка над рукою === */
         #hand-bubble {
             position: absolute; z-index: 1000;
             background: #FF3D7F; color: #fff;
-            border-radius: 50%; width: 80px; height: 80px;
+            border-radius: 50%; width: 90px; height: 90px;
             display: none; align-items: center; justify-content: center;
-            font-size: 2.6rem; font-weight: 900;
+            font-size: 2.8rem; font-weight: 900;
             transform: translate(-50%, -50%);
-            border: 4px solid #fff;
+            border: 5px solid #fff;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
         #hand-bubble.correct { background: #00C170; }
 
-        /* === Екрани === */
         #start-screen, #win-screen {
             position: fixed; inset: 0; z-index: 3000;
             background: radial-gradient(circle, #3d0066, #1a0033);
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
-            color: white; text-align: center;
+            color: white; text-align: center; padding: 20px;
         }
         button {
             background: #FFD700; color: #1a0033; border: none;
             padding: 20px 50px; border-radius: 25px;
             font-size: 1.8rem; font-weight: 900; cursor: pointer;
-            font-family: 'Nunito', sans-serif;
+            box-shadow: 0 10px 0 #b89b00;
         }
+        button:active { transform: translateY(5px); box-shadow: 0 5px 0 #b89b00; }
     </style>
 </head>
 <body>
@@ -103,8 +101,9 @@
 
     <div id="sign-container">
         <div class="sign-card">
-            <img id="road-sign-img" class="sign-image" src="" alt="Дорожній знак">
-            <p id="sign-title" style="color:#1a0033; font-size:1.5rem; margin-top:15px; font-weight:900;"></p>
+            <img id="road-sign-img" class="sign-image" src="" alt="Знак">
+            <h2 id="sign-title" style="color:#1a0033; font-size:1.8rem; margin-top:15px;"></h2>
+            <p id="sign-desc" style="color:#444; font-size:1.2rem; margin-top:10px; font-weight:700; text-align:center;"></p>
         </div>
     </div>
 
@@ -117,15 +116,15 @@
     <div id="start-screen">
         <div style="font-size: 6rem">🚕🚦</div>
         <h1>Вчимо дорожні знаки!</h1>
-        <p>Рахуй пальчики та відкривай знаки</p>
+        <p>Показуй пальчики камері</p>
         <button id="btn-start">ПОЇХАЛИ!</button>
     </div>
 
     <div id="win-screen" style="display:none;">
         <div style="font-size:6rem">🏆🥇</div>
-        <h1>ТИ МОЛОДЕЦЬ!</h1>
-        <p>Тепер ти знаєш правила дорожнього руху!</p>
-        <button onclick="location.reload()">ГРАТИ ЩЕ РАЗ</button>
+        <h1>ТИ СПРАВЖНІЙ ВОДІЙ!</h1>
+        <p>Ти знаєш усі правила!</p>
+        <button onclick="location.reload()">ЩЕ РАЗ</button>
     </div>
 
     <video id="video" autoplay playsinline muted></video>
@@ -140,26 +139,28 @@
         const signContainer = document.getElementById('sign-container');
         const signImg = document.getElementById('road-sign-img');
         const signTitle = document.getElementById('sign-title');
+        const signDesc = document.getElementById('sign-desc');
 
         let handLandmarker, scene, camera, renderer, ring, masterGroup;
         let score = 0;
         let currentTarget = 1;
         let isProcessing = false;
         let countBuffer = [];
+        let confirmCounter = 0;
 
         const lessons = [
-            { num: 1, sign: "Пішохідний перехід", msg: "Покажи ОДИН пальчик!" },
-            { num: 2, sign: "Обережно діти",      msg: "Покажи ДВА пальчики!" },
-            { num: 3, sign: "Круговий рух",       msg: "Покажи ТРИ пальчики!" },
-            { num: 4, sign: "Головна дорога",     msg: "Покажи ЧОТИРИ пальчики!" },
-            { num: 5, sign: "Проїзд заборонено",  msg: "Покажи П'ЯТЬ пальчиків!" }
+            { num: 1, sign: "Пішохідний перехід", desc: "Тут люди переходять дорогу.", msg: "Покажи ОДИН пальчик!" },
+            { num: 2, sign: "Обережно діти",      desc: "Будь уважним, поруч школа або садочок.", msg: "Покажи ДВА пальчики!" },
+            { num: 3, sign: "Круговий рух",       desc: "Машини їдуть по колу.", msg: "Покажи ТРИ пальчики!" },
+            { num: 4, sign: "Головна дорога",     desc: "Ти їдеш першим, тебе пропускають.", msg: "Покажи ЧОТИРИ пальчики!" },
+            { num: 5, sign: "Проїзд заборонено",  desc: "Сюди машинам їхати не можна.", msg: "Покажи П'ЯТЬ пальчиків!" }
         ];
 
         function speak(text, callback) {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
             u.lang = 'uk-UA';
-            u.rate = 0.85;
+            u.rate = 0.9;
             if (callback) u.onend = callback;
             window.speechSynthesis.speak(u);
         }
@@ -188,31 +189,49 @@
             isProcessing = true;
             const lesson = lessons[score];
 
-            // Показуємо зірочку
             document.getElementById(`s${score}`).classList.add('earned');
             ring.material.color.setHex(0x00C170);
 
-            // Шлях до зображення: папка img/ та розширення .jpg
+            // Оновлюємо картку знака
             signImg.src = `img/${score + 1}.jpg`;
             signTitle.textContent = lesson.sign;
-            signContainer.style.display = 'flex';
-
-            // Голосовий супровід назви знака
-            speak(lesson.sign, () => {
-                setTimeout(() => {
-                    signContainer.style.display = 'none';
-                    score++;
-                    ring.material.color.setHex(0xFFD700);
-                    startLesson();
-                }, 2000);
+            signDesc.textContent = lesson.desc;
+            
+            // Говоримо "Молодець!", потім назву і пояснення
+            speak("Молодець!", () => {
+                signContainer.style.display = 'flex';
+                speak(lesson.sign + ". " + lesson.desc, () => {
+                    setTimeout(() => {
+                        signContainer.style.display = 'none';
+                        score++;
+                        ring.material.color.setHex(0xFFD700);
+                        startLesson();
+                    }, 2500);
+                });
             });
         }
 
+        // Покращений алгоритм для дитячих рук
         function countFingers(lm) {
             let count = 0;
-            const tips = [8, 12, 16, 20], pips = [6, 10, 14, 18];
-            tips.forEach((t, i) => { if (lm[t].y < lm[pips[i]].y) count++; });
-            if (Math.abs(lm[4].x - lm[17].x) > 0.16) count++;
+            const wrist = lm[0];
+            const getDist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+
+            // Пальці (кінчик та середня частина)
+            const fingers = [
+                { tip: 8, mid: 6 },  // Вказівний
+                { tip: 12, mid: 10 }, // Середній
+                { tip: 16, mid: 14 }, // Підмізинний
+                { tip: 20, mid: 18 }  // Мізинець
+            ];
+
+            fingers.forEach(f => {
+                if (getDist(lm[f.tip], wrist) > getDist(lm[f.mid], wrist)) count++;
+            });
+
+            // Великий палець (відстань від основи вказівного)
+            if (getDist(lm[4], lm[5]) > 0.08) count++;
+
             return count;
         }
 
@@ -235,8 +254,9 @@
                 if (res.landmarks?.[0]) {
                     const hand = res.landmarks[0];
                     const raw = countFingers(hand);
+                    
                     countBuffer.push(raw);
-                    if (countBuffer.length > 10) countBuffer.shift();
+                    if (countBuffer.length > 20) countBuffer.shift();
                     const smooth = Math.round(countBuffer.reduce((a, b) => a + b, 0) / countBuffer.length);
 
                     const wrist = hand[0];
@@ -249,9 +269,14 @@
                     handBubble.textContent = smooth;
                     
                     if (smooth === currentTarget && !isProcessing) {
-                        handBubble.classList.add('correct');
-                        handleSuccess();
-                    } else if (smooth !== currentTarget) {
+                        confirmCounter++;
+                        if (confirmCounter > 15) { // Утримувати півсекунди
+                            handBubble.classList.add('correct');
+                            handleSuccess();
+                            confirmCounter = 0;
+                        }
+                    } else {
+                        confirmCounter = 0;
                         handBubble.classList.remove('correct');
                     }
                 } else {
